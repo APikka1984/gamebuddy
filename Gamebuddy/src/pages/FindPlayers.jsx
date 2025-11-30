@@ -1,0 +1,283 @@
+// src/pages/FindPlayers.jsx
+import { useEffect, useState } from "react";
+import { db, auth } from "../firebase";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import { useParams, useNavigate } from "react-router-dom";
+
+export default function FindPlayers() {
+  const { sport } = useParams();
+  const [players, setPlayers] = useState([]);
+  const [currentUserLoc, setCurrentUserLoc] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [maxDistance, setMaxDistance] = useState(9999);
+  const [ageFilter, setAgeFilter] = useState("any");
+  const navigate = useNavigate();
+
+  // Haversine
+  const getDistanceKm = (lat1, lon1, lat2, lon2) => {
+    if (lat1 == null || lat2 == null) return null;
+    const R = 6371;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const fetchCurrentUserLocation = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const uDoc = await getDoc(doc(db, "players", auth.currentUser.uid));
+      if (uDoc.exists()) {
+        const data = uDoc.data();
+        if (data.latitude && data.longitude) {
+          setCurrentUserLoc({
+            latitude: data.latitude,
+            longitude: data.longitude,
+          });
+        } else {
+          setCurrentUserLoc(null);
+        }
+      }
+    } catch (err) {
+      console.warn("fetchCurrentUserLocation error:", err.message);
+      setCurrentUserLoc(null);
+    }
+  };
+
+  const fetchPlayers = async () => {
+    setLoading(true);
+    try {
+      let q;
+      if (sport) {
+        q = query(collection(db, "players"), where("sport", "==", sport));
+      } else {
+        q = collection(db, "players");
+      }
+      const snap = await getDocs(q);
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setPlayers(list);
+    } catch (err) {
+      console.warn("fetchPlayers error:", err.message);
+      setPlayers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchCurrentUserLocation();
+      fetchPlayers();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [sport]);
+
+  const startChat = (playerUid) => {
+    if (!auth.currentUser) {
+      alert("Please login first");
+      navigate("/login");
+      return;
+    }
+    if (auth.currentUser.uid === playerUid) {
+      alert("This is you 🙂");
+      return;
+    }
+    const chatId = [auth.currentUser.uid, playerUid].sort().join("_");
+    navigate(`/chat/${chatId}`);
+  };
+
+  const parseAgeRange = (value) => {
+    switch (value) {
+      case "18-25":
+        return { min: 18, max: 25 };
+      case "26-35":
+        return { min: 26, max: 35 };
+      case "36+":
+        return { min: 36, max: null };
+      default:
+        return { min: null, max: null };
+    }
+  };
+
+  const renderStars = (rating = 0) => {
+    const r = Math.max(0, Math.min(5, Number(rating) || 0));
+    const full = Math.floor(r);
+    const empty = 5 - full;
+    return (
+      <div className="flex items-center gap-1 text-yellow-400 text-sm">
+        <span>{"★".repeat(full) + "☆".repeat(empty)}</span>
+        <span className="text-gray-500 text-xs ml-1">
+          {r.toFixed(1)}/5
+        </span>
+      </div>
+    );
+  };
+
+  const renderedPlayers = players
+    .map((p) => {
+      const dist =
+        currentUserLoc && p.latitude && p.longitude
+          ? getDistanceKm(
+              currentUserLoc.latitude,
+              currentUserLoc.longitude,
+              p.latitude,
+              p.longitude
+            )
+          : null;
+      const playerAge = p.age ? parseInt(p.age) : null;
+      // do NOT force isOnline; read from Firestore if present
+      const isOnline = !!p.isOnline;
+      return { ...p, distanceKm: dist, playerAge, isOnline };
+    })
+    .filter((p) => {
+      if (maxDistance !== 9999) {
+        if (p.distanceKm == null || p.distanceKm > maxDistance) return false;
+      }
+      const { min, max } = parseAgeRange(ageFilter);
+      if (min !== null && (!p.playerAge || p.playerAge < min)) return false;
+      if (max !== null && p.playerAge > max) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.distanceKm == null && b.distanceKm == null) return 0;
+      if (a.distanceKm == null) return 1;
+      if (b.distanceKm == null) return -1;
+      return a.distanceKm - b.distanceKm;
+    });
+
+  return (
+    <div className="px-8 pt-28 min-h-screen bg-gray-100">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <h2 className="text-3xl font-bold text-blue-600">
+          {sport ? `${sport} Players` : "Find Players"}
+        </h2>
+
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Distance filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Distance:</label>
+            <select
+              className="p-2 border rounded"
+              value={maxDistance}
+              onChange={(e) => setMaxDistance(Number(e.target.value))}
+            >
+              <option value={9999}>Any</option>
+              <option value={5}>5 km</option>
+              <option value={10}>10 km</option>
+              <option value={25}>25 km</option>
+              <option value={50}>50 km</option>
+            </select>
+          </div>
+
+          {/* Age filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Age:</label>
+            <select
+              className="p-2 border rounded"
+              value={ageFilter}
+              onChange={(e) => setAgeFilter(e.target.value)}
+            >
+              <option value="any">Any</option>
+              <option value="18-25">18–25</option>
+              <option value="26-35">26–35</option>
+              <option value="36+">36+</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <p className="text-center text-gray-600">Loading players...</p>
+      ) : renderedPlayers.length === 0 ? (
+        <p className="text-center text-gray-500">
+          No players found matching your filters.
+        </p>
+      ) : (
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {renderedPlayers.map((p) => (
+            <div
+              key={p.id}
+              className="bg-white p-6 rounded-xl shadow-lg border"
+            >
+              <div className="flex items-center gap-4">
+                {/* avatar with outer ring */}
+                <div
+                  className={
+                    "rounded-full p-0.5 " +
+                    (p.isOnline
+                      ? "ring-2 ring-green-500"
+                      : "ring-2 ring-gray-300")
+                  }
+                >
+                  <img
+                    src={
+                      p.imageUrl ||
+                      "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                    }
+                    alt={p.name || "Player"}
+                    className="w-14 h-14 rounded-full object-cover"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-semibold">
+                    {p.name || "Player"}
+                  </h3>
+                  {/* sport or multiple sports */}
+                  <p className="text-gray-600">
+                    {p.sport ||
+                      (p.sports && p.sports.join(", ")) ||
+                      "-"}
+                  </p>
+                  {/* age + gender */}
+                  {(p.playerAge || p.gender) && (
+                    <p className="text-sm text-gray-500">
+                      {p.playerAge && `${p.playerAge} yrs`}
+                      {p.playerAge && p.gender && " • "}
+                      {p.gender && p.gender}
+                    </p>
+                  )}
+                  {/* rating */}
+                  {renderStars(p.rating || 0)}
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <div>
+                  {p.distanceKm != null ? (
+                    <p className="text-green-600 font-medium">
+                      {p.distanceKm.toFixed(1)} km away
+                    </p>
+                  ) : (
+                    <p className="text-gray-500">Location not available</p>
+                  )}
+                </div>
+
+                <button
+                  className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
+                  onClick={() => startChat(p.uid || p.id)}
+                >
+                  Chat
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
