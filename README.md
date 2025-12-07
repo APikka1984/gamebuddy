@@ -41,3 +41,73 @@ GameBuddy is a web app that helps players find nearby sports partners, see who i
 
 ### `players` collection
 
+
+### `chats` collection
+
+
+
+Where `chatId = [uid1, uid2].sort().join("_")`.
+
+### `messages` subcollection
+
+
+This follows a common Firestore chat pattern (room doc + messages subcollection).[web:113][web:121]
+
+## Core Flows
+
+### Auth & Protection
+
+- `AuthGate` listens to Firebase Auth and syncs Redux with the current user.[web:130]
+- `ProtectedRoute` in `App.jsx` checks `user.uid` and redirects unauthenticated users to `/login`.
+
+### Profile
+
+- `Profile.jsx` loads `players/{uid}`, allows editing fields, and saves to Firestore.[web:130]
+- Sets `isOnline: true` on profile save and `isOnline: false` on logout for a simple presence system.[web:113][web:121]
+- Uploads profile images to Firebase Storage and stores the URL in Firestore.
+- Captures geolocation and stores lat/lng for distance matching.
+
+### Find Players
+
+- `FindPlayers.jsx` loads all players (optionally filtered by sport) and the current user’s location.[web:167]
+- Computes distance using the Haversine formula and applies filters (distance, age).
+- Renders cards with an online ring based on `isOnline`, plus sport, age, gender, and rating.
+- Clicking “Chat”:
+  - Computes a stable `chatId` from the two UIDs.
+  - Upserts `chats/{chatId}` with participants and timestamps.
+  - Navigates to `/chat/:chatId`.
+
+### Chat
+
+- `Chat.jsx` reads `chatId` from the URL, derives the other user’s UID, and loads their profile.[web:130]
+- Listens in real time to `chats/{chatId}/messages` ordered by `createdAt`.
+- Displays messages left/right based on sender.
+- Sends new messages with `serverTimestamp` and updates `lastMessageAt`/`lastMessageText` in `chats/{chatId}`.
+
+### Chats List
+
+- `ChatsList.jsx` queries `chats` where `participants` contains the current UID, ordered by `lastMessageAt`.[web:130]
+- For each chat, loads the other player’s profile and shows avatar, name, last message, and time.
+- Clicking a chat navigates back to `/chat/:chatId`.
+
+## Getting Started
+
+
+
+Vite will start the app on a local development URL.[web:172]
+
+## Environment Variables
+
+Create a `.env` or `.env.local` file:
+
+
+`src/firebase.js` should read these and initialize Firebase using `initializeApp`, `getAuth`, `getFirestore`, and `getStorage`.[web:130]
+
+## Future Improvements
+
+- Real-time presence using Firebase Realtime Database presence API (instead of manual `isOnline` field).[web:113][web:121]
+- Push notifications for new chat messages (Firebase Cloud Messaging).[web:130]
+- Group sessions (e.g., “Need 2 players for football at 7 PM”).
+- More advanced matching (skill level, preferred time, multiple sports).
+
+
