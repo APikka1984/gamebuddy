@@ -31,11 +31,17 @@ export default function Navbar() {
 
         {isLoggedIn && (
           <>
-           <NavLink to="/profile" className={getClass}>Profile</NavLink>
-           <NavLink to="/chats" className={getClass}>Chats</NavLink>
+            <NavLink to="/profile" className={getClass}>
+              Profile
+            </NavLink>
+            <NavLink to="/chats" className={getClass}>
+              Chats
+            </NavLink>
+            <NavLink to="/requests" className={getClass}>
+              Requests
+            </NavLink>
           </>
         )}
-
       </div>
     </nav>
   );

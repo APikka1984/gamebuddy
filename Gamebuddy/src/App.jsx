@@ -3,15 +3,15 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 import Navbar from "./components/Navbar";
-import Login from "./pages/Login";
+import Login from "./pages/login";      // filename is `login.jsx`
 import Signup from "./pages/Signup";
-import ProfileSetup from "./pages/ProfileSetup";
+import Profile from "./pages/Profile";
 import FindPlayers from "./pages/FindPlayers";
 import Home from "./pages/Home";
 import Chat from "./pages/Chat";
 import ChatsList from "./pages/ChatsList";
-import AuthGate from "./components/AuthGate";  // from components/
-// see AuthGate.jsx from previous message
+import AuthGate from "./components/AuthGate";
+import Requests from "./pages/Requests";
 
 function ProtectedRoute({ children }) {
   const user = useSelector((state) => state.user);
@@ -25,19 +25,19 @@ export default function App() {
       <AuthGate>
         <Navbar />
         <Routes>
-          {/* PUBLIC ROUTES */}
+          {/* Public routes */}
           <Route path="/" element={<Home />} />
           <Route path="/players" element={<FindPlayers />} />
           <Route path="/players/:sport" element={<FindPlayers />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
-          {/* PROTECTED ROUTES */}
+          {/* Protected routes */}
           <Route
             path="/profile"
             element={
               <ProtectedRoute>
-                <ProfileSetup />
+                <Profile />
               </ProtectedRoute>
             }
           />
@@ -57,8 +57,16 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/requests"
+            element={
+              <ProtectedRoute>
+                <Requests />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* CATCH-ALL */}
+          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthGate>

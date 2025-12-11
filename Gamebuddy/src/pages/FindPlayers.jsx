@@ -8,6 +8,8 @@ import {
   where,
   doc,
   getDoc,
+  serverTimestamp,
+  addDoc,
 } from "firebase/firestore";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -20,7 +22,7 @@ export default function FindPlayers() {
   const [ageFilter, setAgeFilter] = useState("any");
   const navigate = useNavigate();
 
-  // Haversine
+  // Haversine distance calculation
   const getDistanceKm = (lat1, lon1, lat2, lon2) => {
     if (lat1 == null || lat2 == null) return null;
     const R = 6371;
@@ -61,13 +63,13 @@ export default function FindPlayers() {
   const fetchPlayers = async () => {
     setLoading(true);
     try {
-      let q;
+      let qRef;
       if (sport) {
-        q = query(collection(db, "players"), where("sport", "==", sport));
+        qRef = query(collection(db, "players"), where("sport", "==", sport));
       } else {
-        q = collection(db, "players");
+        qRef = collection(db, "players");
       }
-      const snap = await getDocs(q);
+      const snap = await getDocs(qRef);
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setPlayers(list);
     } catch (err) {
@@ -86,7 +88,8 @@ export default function FindPlayers() {
     return () => clearTimeout(timer);
   }, [sport]);
 
-  const startChat = (playerUid) => {
+  // NEW: send chat request instead of direct chat
+  const sendChatRequest = async (playerUid, playerName, playerSport) => {
     if (!auth.currentUser) {
       alert("Please login first");
       navigate("/login");
@@ -96,8 +99,38 @@ export default function FindPlayers() {
       alert("This is you 🙂");
       return;
     }
-    const chatId = [auth.currentUser.uid, playerUid].sort().join("_");
-    navigate(`/chat/${chatId}`);
+
+    try {
+      // Prevent duplicate pending request from same user to same target
+      const reqsRef = collection(db, "chatRequests");
+      const qRef = query(
+        reqsRef,
+        where("fromUid", "==", auth.currentUser.uid),
+        where("toUid", "==", playerUid),
+        where("status", "==", "pending")
+      );
+      const existing = await getDocs(qRef);
+      if (!existing.empty) {
+        alert("You already sent a request. Please wait for a response.");
+        return;
+      }
+
+      await addDoc(collection(db, "chatRequests"), {
+        fromUid: auth.currentUser.uid,
+        toUid: playerUid,
+        sport: playerSport || null,
+        message: `Hi ${playerName || "player"}! Want to play ${
+          playerSport || "today"
+        }?`,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      });
+
+      alert("Chat request sent!");
+    } catch (err) {
+      console.error("sendChatRequest error:", err);
+      alert("Failed to send request. Please try again.");
+    }
   };
 
   const parseAgeRange = (value) => {
@@ -139,7 +172,6 @@ export default function FindPlayers() {
             )
           : null;
       const playerAge = p.age ? parseInt(p.age) : null;
-      // do NOT force isOnline; read from Firestore if present
       const isOnline = !!p.isOnline;
       return { ...p, distanceKm: dist, playerAge, isOnline };
     })
@@ -167,7 +199,6 @@ export default function FindPlayers() {
         </h2>
 
         <div className="flex flex-wrap items-center gap-4">
-          {/* Distance filter */}
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">Distance:</label>
             <select
@@ -183,7 +214,6 @@ export default function FindPlayers() {
             </select>
           </div>
 
-          {/* Age filter */}
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">Age:</label>
             <select
@@ -214,7 +244,6 @@ export default function FindPlayers() {
               className="bg-white p-6 rounded-xl shadow-lg border"
             >
               <div className="flex items-center gap-4">
-                {/* avatar with outer ring */}
                 <div
                   className={
                     "rounded-full p-0.5 " +
@@ -237,13 +266,11 @@ export default function FindPlayers() {
                   <h3 className="text-xl font-semibold">
                     {p.name || "Player"}
                   </h3>
-                  {/* sport or multiple sports */}
                   <p className="text-gray-600">
                     {p.sport ||
                       (p.sports && p.sports.join(", ")) ||
                       "-"}
                   </p>
-                  {/* age + gender */}
                   {(p.playerAge || p.gender) && (
                     <p className="text-sm text-gray-500">
                       {p.playerAge && `${p.playerAge} yrs`}
@@ -251,7 +278,6 @@ export default function FindPlayers() {
                       {p.gender && p.gender}
                     </p>
                   )}
-                  {/* rating */}
                   {renderStars(p.rating || 0)}
                 </div>
               </div>
@@ -269,9 +295,11 @@ export default function FindPlayers() {
 
                 <button
                   className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
-                  onClick={() => startChat(p.uid || p.id)}
+                  onClick={() =>
+                    sendChatRequest(p.uid || p.id, p.name, p.sport)
+                  }
                 >
-                  Chat
+                  Send Request
                 </button>
               </div>
             </div>
