@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { useDispatch } from "react-redux";
 import { loginUser } from "../redux/userSlice";
+import { GiLightningShield } from "react-icons/gi";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -77,29 +78,44 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen flex justify-center items-center bg-gray-100 px-4 pt-20">
-      <div className="bg-white p-8 rounded-xl shadow-xl w-full max-w-sm">
-        <h2 className="text-2xl font-bold text-center text-blue-600 mb-6">
-          Login
-        </h2>
+    <div className="relative min-h-screen bg-[#050816] text-white flex items-center justify-center px-4 pt-20 pb-10">
+      {/* background glows */}
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.28),_transparent_60%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(34,197,94,0.22),_transparent_55%)]" />
 
-        <p className="text-center text-gray-600 mb-4">
-          New to GameBuddy?{" "}
-          <Link
-            to="/signup"
-            className="text-blue-600 hover:underline font-semibold"
+      <div className="relative z-10 w-full max-w-sm">
+        <div className="bg-white/5 border border-white/10 rounded-2xl shadow-2xl shadow-hero-blue/30 backdrop-blur-xl px-5 py-6 sm:px-6 sm:py-7">
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#020617] border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-hero-green/80">
+              <GiLightningShield className="text-hero-yellow text-base" />
+              <span>GameBuddy</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-extrabold bg-gradient-to-r from-hero-yellow via-hero-green to-hero-blue bg-clip-text text-transparent">
+              Login
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-300 text-center">
+              Sign in to assemble your squad and jump into nearby games.
+            </p>
+          </div>
+
+          <p className="text-center text-xs sm:text-sm text-gray-300 mb-4">
+            New to GameBuddy?{" "}
+            <Link
+              to="/signup"
+              className="text-hero-yellow hover:underline font-semibold"
+            >
+              Signup
+            </Link>
+          </p>
+
+          <button
+            className="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 sm:py-3 rounded-full font-semibold text-sm sm:text-base shadow-lg shadow-red-600/40 disabled:opacity-60 disabled:cursor-not-allowed"
+            onClick={googleLoginHandler}
+            disabled={loading}
           >
-            Signup
-          </Link>
-        </p>
-
-        <button
-          className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-60"
-          onClick={googleLoginHandler}
-          disabled={loading}
-        >
-          {loading ? "Signing in..." : "Continue with Google"}
-        </button>
+            {loading ? "Signing in..." : "Continue with Google"}
+          </button>
+        </div>
       </div>
     </div>
   );

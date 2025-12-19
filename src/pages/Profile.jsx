@@ -1,11 +1,20 @@
-// src/pages/Profile.jsx - ✅ FULLY FIXED TIMESTAMP CRASH
+// src/pages/Profile.jsx - Responsive, themed UI
 import { useEffect, useState } from "react";
 import { auth, db, storage, database } from "../firebase";
 import { useNavigate, Link } from "react-router-dom";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { ref as dbRef, onValue, onDisconnect, set as realtimeSet } from "firebase/database";
+import {
+  ref as dbRef,
+  onValue,
+  onDisconnect,
+  set as realtimeSet,
+} from "firebase/database";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser, logoutUser, updateSport } from "../redux/userSlice";
 import { useToast } from "../components/ToastManager";
@@ -83,7 +92,7 @@ export default function Profile() {
     fetchUser();
   }, [authUser, dispatch]);
 
-  // 🔥 AUTOMATIC ONLINE PRESENCE (SERVER TIMESTAMPS FIXED)
+  // Automatic online presence
   useEffect(() => {
     if (!authUser?.uid) return;
 
@@ -95,12 +104,12 @@ export default function Profile() {
         realtimeSet(userPresenceRef, {
           isOnline: true,
           lastSeenAt: serverTimestamp(),
-          timestamp: serverTimestamp()
+          timestamp: serverTimestamp(),
         });
         onDisconnect(userPresenceRef).set({
           isOnline: false,
           lastSeenAt: serverTimestamp(),
-          timestamp: serverTimestamp()
+          timestamp: serverTimestamp(),
         });
       }
     });
@@ -108,15 +117,19 @@ export default function Profile() {
     const presenceUnsub = onValue(userPresenceRef, async (snap) => {
       const presence = snap.val();
       if (presence) {
-        await setDoc(doc(db, "players", authUser.uid), {
+        await setDoc(
+          doc(db, "players", authUser.uid),
+          {
+            isOnline: presence.isOnline,
+            lastSeenAt: presence.lastSeenAt,
+          },
+          { merge: true }
+        );
+
+        setUserData((prev) => ({
+          ...prev,
           isOnline: presence.isOnline,
           lastSeenAt: presence.lastSeenAt,
-        }, { merge: true });
-        
-        setUserData(prev => ({ 
-          ...prev, 
-          isOnline: presence.isOnline,
-          lastSeenAt: presence.lastSeenAt 
         }));
       }
     });
@@ -129,8 +142,8 @@ export default function Profile() {
 
   if (checkingAuth || !authUser) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
-        <p className="text-gray-600">Loading profile...</p>
+      <div className="flex h-screen items-center justify-center bg-[#050816] text-white">
+        <p className="text-gray-300">Loading profile...</p>
       </div>
     );
   }
@@ -237,7 +250,7 @@ export default function Profile() {
       await realtimeSet(userPresenceRef, {
         isOnline: false,
         lastSeenAt: serverTimestamp(),
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
       });
     }
     await signOut(auth);
@@ -261,201 +274,237 @@ export default function Profile() {
     "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
   const safeRating = Number(rating) || 0;
   const isOnline = userData?.isOnline || false;
-  
-  // ✅ FIXED: SAFE TIMESTAMP HANDLING (RTDB number + Firestore Timestamp)
-  const lastSeenDate = userData?.lastSeenAt 
+
+  // Safe timestamp handling
+  const lastSeenDate = userData?.lastSeenAt
     ? (() => {
         const timestamp = userData.lastSeenAt;
-        if (timestamp && typeof timestamp === 'object' && typeof timestamp.toDate === 'function') {
-          return timestamp.toDate();  // Firestore Timestamp
-        } else if (typeof timestamp === 'number') {
-          return new Date(timestamp);  // RTDB number (epoch ms)
+        if (
+          timestamp &&
+          typeof timestamp === "object" &&
+          typeof timestamp.toDate === "function"
+        ) {
+          return timestamp.toDate(); // Firestore Timestamp
+        } else if (typeof timestamp === "number") {
+          return new Date(timestamp); // RTDB epoch ms
         }
         return null;
       })()
     : null;
 
   return (
-    <div className="flex h-screen bg-gray-100 pt-16">
-      {/* Profile Card */}
-      <div className="w-64 bg-white shadow-lg p-6 flex flex-col items-center">
-        <div className="relative">
-          <div
-            className={`rounded-full p-1 transition-all ${
-              isOnline ? "ring-4 ring-green-500" : "ring-2 ring-gray-300"
-            }`}
-          >
-            <img
-              src={displayPhoto}
-              alt="profile"
-              className="w-28 h-28 rounded-full object-cover"
+    <div className="relative min-h-screen bg-[#050816] text-white pt-20 px-3 sm:px-4 pb-8">
+      {/* background glows */}
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.28),_transparent_60%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(34,197,94,0.22),_transparent_55%)]" />
+
+      <div className="relative z-10 mx-auto max-w-5xl flex flex-col md:flex-row gap-6">
+        {/* Profile Card */}
+        <div className="md:w-72 w-full bg-white/5 border border-white/10 shadow-lg shadow-hero-blue/25 backdrop-blur-md rounded-2xl p-5 flex flex-col items-center">
+          <div className="relative">
+            <div
+              className={`rounded-full p-1 transition-all ${
+                isOnline ? "ring-4 ring-green-500" : "ring-2 ring-gray-500"
+              }`}
+            >
+              <img
+                src={displayPhoto}
+                alt="profile"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover bg-[#020617]"
+              />
+            </div>
+            <label
+              htmlFor="fileUpload"
+              className="absolute -bottom-2 right-0 bg-blue-600 text-white text-[10px] px-2 py-1 rounded-full cursor-pointer shadow-md"
+            >
+              {uploadingImage ? "..." : "Edit"}
+            </label>
+            <input
+              id="fileUpload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={updateProfileImage}
+              disabled={uploadingImage}
             />
           </div>
-          <label
-            htmlFor="fileUpload"
-            className="absolute bottom-0 right-0 bg-blue-600 text-white text-xs px-2 py-1 rounded-full cursor-pointer shadow-md translate-y-1/2"
-          >
-            {uploadingImage ? "..." : "Edit"}
-          </label>
-          <input
-            id="fileUpload"
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={updateProfileImage}
-            disabled={uploadingImage}
-          />
-        </div>
-        <h2 className="text-lg font-bold mt-3">{displayName}</h2>
-        <p className="text-gray-500 text-sm">{displayEmail}</p>
-        <p className="text-blue-500 mt-1">{displaySport}</p>
-        {age && <p className="text-sm text-gray-600">{age} years</p>}
-        {gender && (
-          <p className="text-sm text-gray-600 capitalize">{gender}</p>
-        )}
-        <p className="text-sm text-yellow-500 mt-1">
-          Rating: {safeRating.toFixed(1)}/5
-        </p>
-        {lastSeenDate && (
-          <p className="text-xs text-gray-500 mt-1">
-            Last seen {lastSeenDate.toLocaleString()}
+
+          <h2 className="mt-3 text-base sm:text-lg font-bold text-center">
+            {displayName}
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-300 text-center break-all">
+            {displayEmail}
           </p>
-        )}
-        <button
-          onClick={handleLogout}
-          className="mt-6 w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700"
-        >
-          Logout
-        </button>
-      </div>
+          <p className="text-hero-green mt-1 text-sm">{displaySport}</p>
+          {age && (
+            <p className="text-xs sm:text-sm text-gray-300 mt-1">
+              {age} years
+            </p>
+          )}
+          {gender && (
+            <p className="text-xs sm:text-sm text-gray-300 capitalize">
+              {gender}
+            </p>
+          )}
+          <p className="text-xs sm:text-sm text-yellow-400 mt-1">
+            Rating: {safeRating.toFixed(1)}/5
+          </p>
+          {lastSeenDate && (
+            <p className="text-[11px] text-gray-400 mt-1 text-center">
+              Last seen {lastSeenDate.toLocaleString()}
+            </p>
+          )}
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col px-8">
-        <div className="flex items-center justify-between mt-6 mb-4">
-          <h1 className="text-3xl font-bold text-blue-600">Profile</h1>
-          <div className="flex gap-3">
-            <button
-              className={`px-4 py-2 rounded-lg text-sm font-semibold ${
-                activeTab === "update"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
-              onClick={() => setActiveTab("update")}
-            >
-              Update Profile
-            </button>
-            <button
-              className={`px-4 py-2 rounded-lg text-sm font-semibold ${
-                activeTab === "chats"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
-              onClick={() => setActiveTab("chats")}
-            >
-              Chats
-            </button>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="mt-4 w-full bg-red-600 text-white py-2 rounded-lg text-sm hover:bg-red-700"
+          >
+            Logout
+          </button>
         </div>
 
-        {activeTab === "update" ? (
-          <div className="flex flex-col items-center">
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Name *
-              </label>
-              <input
-                type="text"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                placeholder="Your full name"
-                className="w-64 p-3 border rounded-lg"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Gender *
-              </label>
-              <select
-                className="w-64 p-3 border rounded-lg"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
+        {/* Content */}
+        <div className="flex-1 flex flex-col mt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-hero-yellow via-hero-green to-hero-blue bg-clip-text text-transparent">
+              Profile
+            </h1>
+            <div className="inline-flex rounded-xl bg-white/5 border border-white/10 p-1">
+              <button
+                className={`px-3 py-1.5 text-xs sm:text-sm rounded-lg font-semibold ${
+                  activeTab === "update"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-200"
+                }`}
+                onClick={() => setActiveTab("update")}
               >
-                <option value="">-- Select gender --</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+                Update
+              </button>
+              <button
+                className={`px-3 py-1.5 text-xs sm:text-sm rounded-lg font-semibold ${
+                  activeTab === "chats"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-200"
+                }`}
+                onClick={() => setActiveTab("chats")}
+              >
+                Chats
+              </button>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Age *
-              </label>
-              <input
-                type="number"
-                min="13"
-                max="100"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                placeholder="Enter your age"
-                className="w-64 p-3 border rounded-lg"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Your skill rating (0–5)
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="5"
-                step="0.5"
-                value={rating}
-                onChange={(e) => setRating(e.target.value)}
-                className="w-64 p-3 border rounded-lg"
-              />
-            </div>
-            <select
-              className="w-64 p-3 border rounded-lg mb-3"
-              value={sport}
-              onChange={(e) => setSport(e.target.value)}
-            >
-              <option value="">-- Select Sport --</option>
-              <option value="cricket">Cricket 🏏</option>
-              <option value="football">Football ⚽</option>
-              <option value="badminton">Badminton 🏸</option>
-              <option value="tennis">Tennis 🎾</option>
-              <option value="chess">Chess ♟️</option>
-            </select>
-            <button
-              className="bg-green-600 text-white py-2 px-8 rounded-lg hover:bg-green-700 mb-4"
-              onClick={saveProfile}
-            >
-              Save Profile
-            </button>
-            <button
-              className="bg-purple-600 text-white py-2 px-6 rounded-lg hover:bg-purple-700 disabled:opacity-60"
-              onClick={saveLocation}
-              disabled={savingLocation}
-            >
-              {savingLocation ? "Saving..." : "Save My Location 📍"}
-            </button>
-            <p className="text-sm text-gray-500 mt-3">
-              Used only to find players near you.
-            </p>
           </div>
-        ) : (
-          <div className="flex flex-col items-center mt-8">
-            <p className="mb-3 text-gray-700">
-              Open your chats to talk with players.
-            </p>
-            <Link
-              to="/chats"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold"
-            >
-              Go to Chats
-            </Link>
-          </div>
-        )}
+
+          {activeTab === "update" ? (
+            <div className="w-full max-w-md mx-auto space-y-3">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-200 mb-1">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="Your full name"
+                  className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-white/15 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-200 mb-1">
+                  Gender *
+                </label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-white/15 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                >
+                  <option value="">-- Select gender --</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-200 mb-1">
+                  Age *
+                </label>
+                <input
+                  type="number"
+                  min="13"
+                  max="100"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="Enter your age"
+                  className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-white/15 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-200 mb-1">
+                  Your skill rating (0–5)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.5"
+                  value={rating}
+                  onChange={(e) => setRating(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-white/15 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-200 mb-1">
+                  Sport *
+                </label>
+                <select
+                  className="w-full px-3 py-2 rounded-lg bg-[#020617] border border-white/15 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  value={sport}
+                  onChange={(e) => setSport(e.target.value)}
+                >
+                  <option value="">-- Select Sport --</option>
+                  <option value="cricket">Cricket 🏏</option>
+                  <option value="football">Football ⚽</option>
+                  <option value="badminton">Badminton 🏸</option>
+                  <option value="tennis">Tennis 🎾</option>
+                  <option value="chess">Chess ♟️</option>
+                </select>
+              </div>
+
+              <button
+                className="w-full bg-green-500 text-black py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-400"
+                onClick={saveProfile}
+              >
+                Save Profile
+              </button>
+
+              <button
+                className="w-full bg-purple-600 text-white py-2.5 rounded-lg text-sm hover:bg-purple-700 disabled:opacity-60"
+                onClick={saveLocation}
+                disabled={savingLocation}
+              >
+                {savingLocation ? "Saving..." : "Save My Location 📍"}
+              </button>
+
+              <p className="text-[11px] text-gray-400 text-center">
+                Used only to find players near you.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-6 flex flex-col items-center">
+              <p className="mb-2 text-sm text-gray-200">
+                Open your chats to talk with players.
+              </p>
+              <Link
+                to="/chats"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-500"
+              >
+                Go to Chats
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

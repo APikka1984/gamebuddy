@@ -12,6 +12,7 @@ import {
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { useToast } from "../components/ToastManager";
+import { GiLightningShield } from "react-icons/gi";
 
 export default function Requests() {
   const user = useSelector((state) => state.user);
@@ -67,8 +68,8 @@ export default function Requests() {
 
   if (!user?.uid) {
     return (
-      <div className="pt-20 max-w-xl mx-auto p-4">
-        <p className="text-center text-gray-600">
+      <div className="flex min-h-screen items-center justify-center bg-[#050816] text-white px-4">
+        <p className="text-center text-gray-300">
           Please log in to see your chat requests.
         </p>
       </div>
@@ -76,58 +77,76 @@ export default function Requests() {
   }
 
   return (
-    <div className="pt-20 max-w-3xl mx-auto p-4">
-      <h1 className="text-3xl font-bold text-blue-600 mb-6">Chat Requests</h1>
+    <div className="relative min-h-screen bg-[#050816] text-white pt-20 px-3 sm:px-4 pb-10">
+      {/* background glows */}
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.28),_transparent_60%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(34,197,94,0.22),_transparent_55%)]" />
 
-      {loading ? (
-        <p className="text-gray-600">Loading requests...</p>
-      ) : requests.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow p-6 text-center text-gray-600">
-          <p>No pending chat requests right now.</p>
-          <p className="mt-2">
-            Go to{" "}
-            <Link to="/" className="text-blue-600 underline">
-              Find Players
-            </Link>{" "}
-            to send or receive requests.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {requests.map((req) => (
-            <div
-              key={req.id}
-              className="bg-white rounded-2xl shadow p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-            >
-              <div>
-                <p className="font-semibold text-gray-800">
-                  From: {req.fromName || req.fromUid}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Sport: {req.sport || "Any"}
-                </p>
-                {req.message && (
-                  <p className="text-sm text-gray-500 mt-1">{req.message}</p>
-                )}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700"
-                  onClick={() => handleRespond(req, "accepted")}
-                >
-                  Accept
-                </button>
-                <button
-                  className="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-200"
-                  onClick={() => handleRespond(req, "rejected")}
-                >
-                  Reject
-                </button>
-              </div>
+      <div className="relative z-10 max-w-3xl mx-auto">
+        <div className="flex items-center justify-between mb-5 sm:mb-6">
+          <div>
+            <div className="flex items-center gap-1 text-[11px] uppercase tracking-[0.2em] text-hero-green/80">
+              <GiLightningShield className="text-hero-yellow text-lg" />
+              <span>Requests</span>
             </div>
-          ))}
+            <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-hero-yellow via-hero-green to-hero-blue bg-clip-text text-transparent">
+              Chat requests
+            </h1>
+          </div>
         </div>
-      )}
+
+        {loading ? (
+          <p className="text-gray-300 text-sm mt-2">Loading requests...</p>
+        ) : requests.length === 0 ? (
+          <div className="bg-white/5 border border-white/10 rounded-2xl shadow-xl shadow-hero-blue/20 backdrop-blur-md p-5 sm:p-6 text-center text-gray-200">
+            <p>No pending chat requests right now.</p>
+            <p className="mt-2 text-sm">
+              Go to{" "}
+              <Link to="/" className="text-hero-yellow underline">
+                Find Players
+              </Link>{" "}
+              to send or receive requests.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 sm:space-y-4">
+            {requests.map((req) => (
+              <div
+                key={req.id}
+                className="bg-white/5 border border-white/10 rounded-2xl shadow-lg shadow-hero-blue/20 backdrop-blur-md p-4 sm:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm sm:text-base text-gray-50 truncate">
+                    From: {req.fromName || req.fromUid}
+                  </p>
+                  <p className="text-xs sm:text-sm text-gray-300">
+                    Sport: {req.sport || "Any"}
+                  </p>
+                  {req.message && (
+                    <p className="mt-1 text-xs sm:text-sm text-gray-400">
+                      {req.message}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 sm:gap-3">
+                  <button
+                    className="bg-hero-green text-black px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:bg-emerald-400"
+                    onClick={() => handleRespond(req, "accepted")}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    className="bg-red-600/90 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:bg-red-700"
+                    onClick={() => handleRespond(req, "rejected")}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

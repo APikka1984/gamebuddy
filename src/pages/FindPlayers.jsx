@@ -1,4 +1,4 @@
-// src/pages/FindPlayers.jsx - FULLY UPDATED (REQUEST → CHAT)
+// src/pages/FindPlayers.jsx - STYLED (stadium + superhero theme)
 import { useEffect, useState } from "react";
 import { db, auth } from "../firebase";
 import {
@@ -13,6 +13,14 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  FaBasketballBall,
+  FaFootballBall,
+  FaTableTennis,
+  FaMapMarkerAlt,
+} from "react-icons/fa";
+import { GiSoccerKick, GiTennisRacket, GiLightningShield } from "react-icons/gi";
+import { MdSportsCricket } from "react-icons/md";
 
 export default function FindPlayers() {
   const { sport } = useParams();
@@ -202,9 +210,7 @@ export default function FindPlayers() {
       await addDoc(collection(db, "chatRequests"), {
         fromUid: auth.currentUser.uid,
         fromName:
-          auth.currentUser.displayName ||
-          auth.currentUser.email ||
-          "Player",
+          auth.currentUser.displayName || auth.currentUser.email || "Player",
         toUid: playerUid,
         toName: playerName || null,
         sport: playerSport || null,
@@ -240,11 +246,22 @@ export default function FindPlayers() {
     const full = Math.floor(r);
     const empty = 5 - full;
     return (
-      <div className="flex items-center gap-1 text-yellow-400 text-sm">
+      <div className="flex items-center gap-1 text-hero-yellow text-sm">
         <span>{"★".repeat(full) + "☆".repeat(empty)}</span>
-        <span className="text-gray-500 text-xs ml-1">{r.toFixed(1)}/5</span>
+        <span className="text-xs text-gray-400 ml-1">{r.toFixed(1)}/5</span>
       </div>
     );
+  };
+
+  const sportIcon = (name) => {
+    const s = (name || "").toLowerCase();
+    if (s.includes("football") || s.includes("soccer")) return <GiSoccerKick />;
+    if (s.includes("basket")) return <FaBasketballBall />;
+    if (s.includes("cricket")) return <MdSportsCricket />;
+    if (s.includes("tennis") || s.includes("badminton"))
+      return <GiTennisRacket />;
+    if (s.includes("table")) return <FaTableTennis />;
+    return <FaFootballBall />;
   };
 
   const renderedPlayers = players
@@ -279,144 +296,237 @@ export default function FindPlayers() {
     });
 
   return (
-    <div className="px-8 pt-28 min-h-screen bg-gray-100">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h2 className="text-3xl font-bold text-blue-600">
-          {sport ? `${sport} Players` : "Find Players"}
-        </h2>
-
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Distance:</label>
-            <select
-              className="p-2 border rounded"
-              value={maxDistance}
-              onChange={(e) => setMaxDistance(Number(e.target.value))}
-            >
-              <option value={9999}>Any</option>
-              <option value={5}>5 km</option>
-              <option value={10}>10 km</option>
-              <option value={25}>25 km</option>
-              <option value={50}>50 km</option>
-            </select>
+    <div className="relative min-h-screen bg-[#050816] text-white px-4 sm:px-6 lg:px-10 pt-28 pb-14">
+      {/* Stadium / hero glows */}
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.25),_transparent_60%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(34,197,94,0.22),_transparent_55%)]" />
+      <div className="relative z-10 max-w-6xl mx-auto">
+        {/* Header + filters */}
+        <div className="flex flex-wrap items-start justify-between gap-6 mb-8">
+          <div>
+            <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-hero-green/80">
+              <GiLightningShield className="text-hero-yellow text-xl" />
+              <span>Squad Finder</span>
+            </div>
+            <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold leading-tight">
+              <span className="bg-gradient-to-r from-hero-yellow via-hero-green to-hero-blue bg-clip-text text-transparent">
+                {sport ? `${sport} heroes nearby` : "Assemble your squad"}
+              </span>
+            </h2>
+            <p className="mt-2 text-sm sm:text-base text-gray-300 max-w-xl">
+              Filter by distance and age, then send a request to start a
+              1:1 chat and lock in today&apos;s game.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Age:</label>
-            <select
-              className="p-2 border rounded"
-              value={ageFilter}
-              onChange={(e) => setAgeFilter(e.target.value)}
-            >
-              <option value="any">Any</option>
-              <option value="18-25">18–25</option>
-              <option value="26-35">26–35</option>
-              <option value="36+">36+</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <p className="text-center text-gray-600">Loading players...</p>
-      ) : renderedPlayers.length === 0 ? (
-        <p className="text-center text-gray-500">
-          No players found matching your filters.
-        </p>
-      ) : (
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {renderedPlayers.map((p) => {
-            const targetUid = p.uid || p.id;
-            const isRequested = pendingRequests.has(targetUid);
-            const isAccepted = acceptedRequests.has(targetUid);
-
-            return (
-              <div
-                key={p.id}
-                className="bg-white p-6 rounded-xl shadow-lg border"
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 backdrop-blur-md shadow-lg shadow-hero-blue/20">
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wide text-gray-300">
+                Distance
+              </span>
+              <select
+                className="bg-[#020617] border border-white/15 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-hero-blue/80"
+                value={maxDistance}
+                onChange={(e) => setMaxDistance(Number(e.target.value))}
               >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={
-                      "rounded-full p-0.5 " +
-                      (p.isOnline
-                        ? "ring-2 ring-green-500"
-                        : "ring-2 ring-gray-300")
-                    }
-                  >
-                    <img
-                      src={
-                        p.imageUrl ||
-                        "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-                      }
-                      alt={p.name || "Player"}
-                      className="w-14 h-14 rounded-full object-cover"
-                    />
-                  </div>
+                <option value={9999}>Any</option>
+                <option value={5}>5 km</option>
+                <option value={10}>10 km</option>
+                <option value={25}>25 km</option>
+                <option value={50}>50 km</option>
+              </select>
+            </div>
 
-                  <div>
-                    <h3 className="text-xl font-semibold">
-                      {p.name || "Player"}
-                    </h3>
-                    <p className="text-gray-600">
-                      {p.sport ||
-                        (p.sports && p.sports.join(", ")) ||
-                        "-"}
-                    </p>
-                    {(p.playerAge || p.gender) && (
-                      <p className="text-sm text-gray-500">
-                        {p.playerAge && `${p.playerAge} yrs`}
-                        {p.playerAge && p.gender && " • "}
-                        {p.gender && p.gender}
-                      </p>
-                    )}
-                    {renderStars(p.rating || 0)}
-                  </div>
-                </div>
+            <div className="h-px sm:h-8 sm:w-px bg-white/10 sm:mx-1" />
 
-                <div className="mt-4 flex items-center justify-between">
-                  <div>
-                    {p.distanceKm != null ? (
-                      <p className="text-green-600 font-medium">
-                        {p.distanceKm.toFixed(1)} km away
-                      </p>
-                    ) : (
-                      <p className="text-gray-500">
-                        Location not available
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    className={
-                      "px-3 py-2 rounded text-white " +
-                      (isAccepted
-                        ? "bg-green-600 hover:bg-green-700"
-                        : isRequested
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700")
-                    }
-                    disabled={isRequested && !isAccepted}
-                    onClick={() => {
-                      if (isAccepted) {
-                        startChat(targetUid);
-                      } else if (!isRequested) {
-                        sendChatRequest(targetUid, p.name, p.sport);
-                      }
-                    }}
-                  >
-                    {isAccepted
-                      ? "Chat"
-                      : isRequested
-                      ? "Requested"
-                      : "Send Request"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wide text-gray-300">
+                Age band
+              </span>
+              <select
+                className="bg-[#020617] border border-white/15 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-hero-blue/80"
+                value={ageFilter}
+                onChange={(e) => setAgeFilter(e.target.value)}
+              >
+                <option value="any">Any</option>
+                <option value="18-25">18–25</option>
+                <option value="26-35">26–35</option>
+                <option value="36+">36+</option>
+              </select>
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Legend / icon row */}
+        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-300 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-2 w-2 rounded-full bg-green-400" />
+            <span>Online now</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <FaMapMarkerAlt className="text-hero-yellow" />
+            <span>Sorted by distance</span>
+          </div>
+          <div className="flex items-center gap-2 text-lg text-hero-yellow/80">
+            <FaBasketballBall />
+            <GiSoccerKick />
+            <MdSportsCricket />
+            <GiTennisRacket />
+            <FaTableTennis />
+            <span className="text-xs text-gray-300 ml-1">
+              Icons adapt to player sport
+            </span>
+          </div>
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div className="mt-10 flex justify-center">
+            <p className="text-gray-300 text-sm">
+              Scouting nearby players&hellip;
+            </p>
+          </div>
+        ) : renderedPlayers.length === 0 ? (
+          <div className="mt-10 flex flex-col items-center gap-2 text-center">
+            <p className="text-gray-300 text-sm">
+              No players match your filters yet.
+            </p>
+            <p className="text-xs text-gray-400">
+              Try widening the distance or age band to assemble a bigger squad.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {renderedPlayers.map((p) => {
+              const targetUid = p.uid || p.id;
+              const isRequested = pendingRequests.has(targetUid);
+              const isAccepted = acceptedRequests.has(targetUid);
+
+              return (
+                <div
+                  key={p.id}
+                  className="group relative rounded-2xl bg-white/5 border border-white/10 shadow-lg shadow-hero-blue/20 backdrop-blur-md p-5 flex flex-col gap-4 hover:border-hero-yellow/70 hover:shadow-hero-yellow/30 hover:-translate-y-1 transition"
+                >
+                  {/* Sport pill + online badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#020617]/80 border border-white/15 px-3 py-1 text-xs text-gray-200">
+                      <span className="text-hero-yellow text-lg">
+                        {sportIcon(
+                          p.sport ||
+                            (p.sports && p.sports[0]) ||
+                            "Sport"
+                        )}
+                      </span>
+                      <span className="truncate max-w-[110px]">
+                        {p.sport ||
+                          (p.sports && p.sports.join(", ")) ||
+                          "Any sport"}
+                      </span>
+                    </div>
+
+                    <span
+                      className={
+                        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium " +
+                        (p.isOnline
+                          ? "bg-green-500/15 text-green-300 border border-green-400/60"
+                          : "bg-gray-700/40 text-gray-300 border border-gray-500/50")
+                      }
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      {p.isOnline ? "Online" : "Offline"}
+                    </span>
+                  </div>
+
+                  {/* Avatar + details */}
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={
+                        "rounded-full p-[2px] " +
+                        (p.isOnline
+                          ? "bg-gradient-to-tr from-hero-green via-hero-blue to-hero-yellow"
+                          : "bg-gray-600/60")
+                      }
+                    >
+                      <img
+                        src={
+                          p.imageUrl ||
+                          "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                        }
+                        alt={p.name || "Player"}
+                        className="w-14 h-14 rounded-full object-cover bg-[#020617]"
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-semibold truncate">
+                        {p.name || "Player"}
+                      </h3>
+                      {(p.playerAge || p.gender) && (
+                        <p className="text-xs text-gray-300">
+                          {p.playerAge && `${p.playerAge} yrs`}
+                          {p.playerAge && p.gender && " • "}
+                          {p.gender && p.gender}
+                        </p>
+                      )}
+                      {renderStars(p.rating || 0)}
+                    </div>
+                  </div>
+
+                  {/* Distance + CTA */}
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <FaMapMarkerAlt className="text-hero-yellow" />
+                      {p.distanceKm != null ? (
+                        <span className="font-medium text-hero-green">
+                          {p.distanceKm.toFixed(1)} km away
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">
+                          Location not available
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      className={
+                        "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold uppercase tracking-wide " +
+                        (isAccepted
+                          ? "bg-hero-green text-black hover:bg-emerald-400"
+                          : isRequested
+                          ? "bg-gray-500/70 text-gray-200 cursor-not-allowed"
+                          : "bg-hero-blue text-white hover:bg-blue-500") +
+                        " transition"
+                      }
+                      disabled={isRequested && !isAccepted}
+                      onClick={() => {
+                        if (isAccepted) {
+                          startChat(targetUid);
+                        } else if (!isRequested) {
+                          sendChatRequest(targetUid, p.name, p.sport);
+                        }
+                      }}
+                    >
+                      {isAccepted ? (
+                        <>
+                          <GiLightningShield className="text-lg" />
+                          <span>Chat</span>
+                        </>
+                      ) : isRequested ? (
+                        <span>Requested</span>
+                      ) : (
+                        <>
+                          <GiLightningShield className="text-lg" />
+                          <span>Send request</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
